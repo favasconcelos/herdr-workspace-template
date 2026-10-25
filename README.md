@@ -185,6 +185,7 @@ lightweight alternative: a fixed tab set applied to *every* new workspace, no pe
 PRs welcome. Test with:
 
 ```bash
+npm run lint                                        # Biome check (same as CI)
 npm test                                              # build tests + 31 unit tests
 herdr plugin link <checkout> && npm run build
 herdr workspace create --cwd /tmp --label template-test --focus

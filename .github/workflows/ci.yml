@@ -26,6 +26,9 @@ jobs:
       - name: Install (locked deps)
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Build plugin
         run: npm run build
 

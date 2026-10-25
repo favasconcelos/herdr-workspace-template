@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Biome lint (`npm run lint`, `npm run format`) on the shared
+  `@favasconcelos/biome-config/base` preset, enforced in CI — same setup as
+  `reclaim-cli`.
 - Per-project override: `.herdr-tabs.json` in the workspace checkout wins over
   global `tabs.json` (resolved via invocation context cwd, else `pane list`).
 - Rich tab specs: `tabs[]` entries accept `{label, cwd, command, env, splits}`
