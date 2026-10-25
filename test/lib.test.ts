@@ -1,5 +1,8 @@
-// lib.test.ts — unit tests for the workspace-template plugin.
-// Run: npm test (builds tests with tsc, then node --test dist-test/)
+/**
+ * Unit tests for the workspace-template plugin.
+ *
+ * Run with `npm test` (builds tests with tsc, then `node --test dist-test/`).
+ */
 
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';

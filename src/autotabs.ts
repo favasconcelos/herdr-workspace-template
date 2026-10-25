@@ -1,7 +1,17 @@
 #!/usr/bin/env node
-// autotabs.ts — runs on workspace.created / workspace.focused.
-// Env from Herdr: HERDR_BIN_PATH, HERDR_PLUGIN_EVENT, HERDR_PLUGIN_EVENT_JSON,
-// HERDR_PLUGIN_CONFIG_DIR, HERDR_PLUGIN_STATE_DIR, HERDR_WORKSPACE_ID (sometimes).
+/**
+ * Event-hook entrypoint: runs on `workspace.created` and `workspace.focused`.
+ *
+ * Both events are needed: UI-created worktrees historically emit only
+ * `workspace.focused`, while CLI creates emit `workspace.created`. A state-dir
+ * marker dedupes so each workspace is templated once. Runs non-interactively,
+ * so template choice comes from the resolved config (`HERDR_TEMPLATE` or
+ * `default_template`) with no prompting.
+ *
+ * Herdr-provided env: `HERDR_BIN_PATH`, `HERDR_PLUGIN_EVENT`,
+ * `HERDR_PLUGIN_EVENT_JSON`, `HERDR_PLUGIN_CONFIG_DIR`,
+ * `HERDR_PLUGIN_STATE_DIR`, sometimes `HERDR_WORKSPACE_ID`.
+ */
 
 import {
   extractWorkspaceId,
@@ -18,11 +28,8 @@ function main(): void {
     process.exit(0);
   }
 
-  // Dedupe: workspace.focused fires on every switch; only template once.
   if (alreadyDone(ws)) process.exit(0);
 
-  // Non-interactive: per-project .herdr-tabs.json wins over global tabs.json,
-  // HERDR_TEMPLATE / default_template pick a named template.
   const resolved = resolveTabsConfig(ws);
   const selected = selectTemplate(resolved);
   if (selected.error) {

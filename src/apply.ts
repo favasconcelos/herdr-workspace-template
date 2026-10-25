@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-// apply.ts — manual action: apply the template to the workspace from the
-// invocation context (HERDR_PLUGIN_CONTEXT_JSON, HERDR_WORKSPACE_ID fallback).
-//
-// Chooser (v0.3): when the resolved config defines named templates,
-// HERDR_TEMPLATE=<name> selects one directly. Otherwise, if stdout is a TTY
-// and `fzf` is available, the user picks interactively; headless invocations
-// fall back to the default template.
+/**
+ * Manual action entrypoint: applies the template to the workspace from the
+ * invocation context (`HERDR_PLUGIN_CONTEXT_JSON`, `HERDR_WORKSPACE_ID` fallback).
+ *
+ * Template choice: `HERDR_TEMPLATE=<name>` selects a named template directly.
+ * Otherwise, when attached to a TTY and `fzf` is available, the user picks
+ * from the configured templates; headless invocations use the default template.
+ */
 
 import { spawnSync } from 'node:child_process';
 import {
@@ -17,6 +18,12 @@ import {
   type ResolvedConfig,
 } from './lib';
 
+/**
+ * Offers the configured template names through `fzf`.
+ *
+ * @returns The chosen name, or null when there is nothing to choose, no TTY
+ * is attached, `fzf` is missing, or the user aborts.
+ */
 function tryFzfChoose(available: string[]): string | null {
   if (available.length === 0) return null;
   if (!process.stdin.isTTY || !process.stdout.isTTY) return null;
@@ -46,8 +53,6 @@ function main(): void {
   });
   const available = Object.keys(resolved.templates ?? {});
   let selected = selectTemplate(resolved);
-
-  // Interactive chooser: only when the user didn't pin HERDR_TEMPLATE.
   if (!process.env.HERDR_TEMPLATE && available.length > 0) {
     const choice = tryFzfChoose(available);
     if (choice && resolved.templates) {

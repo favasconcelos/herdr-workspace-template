@@ -1,37 +1,63 @@
-// lib.ts — shared helpers for the workspace-template plugin.
-// Used by autotabs.ts (event hook) and apply.ts (manual action).
+/**
+ * Shared helpers for the workspace-template plugin.
+ *
+ * Used by `autotabs.ts` (workspace.created/workspace.focused event hook) and
+ * `apply.ts` (manual action). All Herdr interaction goes through the CLI, so
+ * the plugin stays dependency-free and cross-platform.
+ */
 
 import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+/** Herdr plugin id, used for default config/state directory names. */
 export const PLUGIN_ID = 'workspace-template';
+/** Tab labels created when no config file is found. */
 export const DEFAULT_TABS: string[] = ['logs', 'server'];
+/** Label applied to `<ws>:t1` when no config file is found; empty disables renaming. */
 export const DEFAULT_RENAME_FIRST = 'agent';
+/** Per-project override file, resolved inside the workspace checkout directory. */
 export const PROJECT_CONFIG_NAME = '.herdr-tabs.json';
 
+/** Split direction for an extra pane, as accepted by `herdr pane split`. */
 export type SplitDirection = 'right' | 'down';
 
+/** One extra pane inside a tab, created with `pane split` off the previous pane. */
 export interface PaneSpec {
+  /** Label applied with `pane rename`. Unset leaves the Herdr default. */
   label?: string;
+  /** Command executed with `pane run` once the pane exists. */
   command?: string[];
+  /** Working directory passed as `pane split --cwd`. */
   cwd?: string;
+  /** Split direction; defaults to `'right'`. */
   direction?: SplitDirection;
+  /** Split ratio in (0, 1), passed as `pane split --ratio`. */
   ratio?: number;
+  /** Environment variables passed as repeated `pane split --env KEY=VALUE`. */
   env?: Record<string, string>;
 }
 
+/** One tab created with `tab create`, plus optional commands and pane splits inside it. */
 export interface TabSpec {
+  /** Tab label, passed as `tab create --label`. */
   label: string;
+  /** Working directory passed as `tab create --cwd`. */
   cwd?: string;
+  /** Command executed with `pane run` in the tab's root pane. */
   command?: string[];
+  /** Environment variables passed as repeated `tab create --env KEY=VALUE`. */
   env?: Record<string, string>;
+  /** Extra panes created with `pane split` off the previous pane. */
   splits?: PaneSpec[];
 }
 
+/** A fully parsed template: tab list plus first-tab rename label. */
 export interface TabsConfig {
+  /** Tabs to create, in order. */
   tabs: TabSpec[];
+  /** Label applied to `<ws>:t1`; empty string disables renaming. */
   renameFirst: string;
   /** Name of the template this config was selected from (default template has ''). */
   templateName?: string;
@@ -39,24 +65,46 @@ export interface TabsConfig {
   source?: 'project' | 'global';
   /** Workspace cwd the project config was found in (if any). */
   projectCwd?: string;
-  /** All template names available in the source file (including default as ''). */
+  /** All template names available in the source file. */
   availableTemplates?: string[];
 }
 
+/** A parsed config file, including any named templates for the chooser. */
+export interface ResolvedConfig extends TabsConfig {
+  /** Named templates from the file's `templates` map. */
+  templates?: Record<string, { tabs: TabSpec[]; renameFirst: string }>;
+  /** Template name from the file's `default_template` key. */
+  defaultTemplate?: string;
+}
+
+/** Outcome of {@link applyTemplate}. */
 export interface ApplyResult {
+  /** Whether the template was applied (false when the 1-tab guard skipped). */
   applied: boolean;
+  /** Skip reason, set when `applied` is false. */
   reason?: string;
+  /** Labels of the tabs the template defines, in order. */
   tabs: string[];
+  /** Rename label used for `<ws>:t1`. */
   renameFirst: string;
+  /** Tab or split labels that failed to create. */
   failed: string[];
+  /** Name of the applied template ('' for the default). */
   templateName?: string;
+  /** Where the applied config came from. */
   source?: 'project' | 'global';
 }
 
+/** Herdr binary path, honoring the `HERDR_BIN_PATH` override Herdr provides. */
 export function herdrBin(): string {
   return process.env.HERDR_BIN_PATH || 'herdr';
 }
 
+/**
+ * Runs a Herdr CLI command and captures the result.
+ *
+ * @param args Arguments passed to the `herdr` binary, e.g. `['tab', 'list']`.
+ */
 export function runHerdr(args: string[]): { status: number; stdout: string; stderr: string } {
   const result = spawnSync(herdrBin(), args, {
     encoding: 'utf8',
@@ -69,14 +117,17 @@ export function runHerdr(args: string[]): { status: number; stdout: string; stde
   };
 }
 
+/** Default global config directory for this plugin. */
 function defaultConfigDir(): string {
   return path.join(os.homedir(), '.config', 'herdr', 'plugins', 'config', PLUGIN_ID);
 }
 
+/** Returns the value when it is a string, otherwise ''. */
 function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
+/** Parses an `env` record, stringifying numeric/boolean values. */
 function parseEnvRecord(value: unknown): Record<string, string> | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
   const out: Record<string, string> = {};
@@ -87,6 +138,7 @@ function parseEnvRecord(value: unknown): Record<string, string> | undefined {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+/** Parses a `command` given as a string or string array. */
 function parseCommand(value: unknown): string[] | undefined {
   if (typeof value === 'string' && value.length > 0) return [value];
   if (Array.isArray(value)) {
@@ -98,16 +150,22 @@ function parseCommand(value: unknown): string[] | undefined {
   return undefined;
 }
 
+/**
+ * Normalizes a split direction, mapping `vertical`/`horizontal` aliases to
+ * Herdr's `right`/`down`.
+ *
+ * @returns The normalized direction, or undefined for unknown values.
+ */
 export function normalizeDirection(value: unknown): SplitDirection | undefined {
   if (typeof value !== 'string') return undefined;
   const v = value.toLowerCase();
   if (v === 'right' || v === 'down') return v;
-  // workspace-manager compat: vertical = side-by-side, horizontal = stacked.
   if (v === 'vertical') return 'right';
   if (v === 'horizontal') return 'down';
   return undefined;
 }
 
+/** Parses one pane entry (string label or object) into a {@link PaneSpec}. */
 function parsePaneSpec(entry: unknown): PaneSpec | null {
   if (typeof entry === 'string') {
     return entry.length > 0 ? { label: entry } : null;
@@ -132,7 +190,16 @@ function parsePaneSpec(entry: unknown): PaneSpec | null {
   return spec;
 }
 
-/** Normalizes one `tabs[]` entry: a plain string label or a rich object. */
+/**
+ * Normalizes one `tabs[]` entry into a {@link TabSpec}.
+ *
+ * Accepts a plain string label or a rich object with `label` (`title` alias),
+ * `cwd`, `command` (string or string array), `env`, and `splits`. `panes` is
+ * accepted as an alias for `splits`: its first entry describes the root pane,
+ * so its command/cwd/env fold into the tab and only the rest become splits.
+ *
+ * @returns The normalized spec, or null when the entry carries no usable data.
+ */
 export function parseTabSpec(entry: unknown): TabSpec | null {
   if (typeof entry === 'string') {
     return entry.length > 0 ? { label: entry } : null;
@@ -154,10 +221,6 @@ export function parseTabSpec(entry: unknown): TabSpec | null {
       ? (obj.panes as unknown[])
       : null;
   if (rawSplits) {
-    // `panes` (workspace-manager style) includes the root pane as its first
-    // entry; `splits` are extra panes only. When `panes` is used, the first
-    // entry describes the root pane, so fold its command/cwd/env up and only
-    // split the rest.
     let list: unknown[] = rawSplits;
     if (Array.isArray(obj.panes) && !Array.isArray(obj.splits) && list.length > 0) {
       const root = parsePaneSpec(list[0]);
@@ -178,6 +241,7 @@ export function parseTabSpec(entry: unknown): TabSpec | null {
   return spec;
 }
 
+/** Parses a `tabs` list, falling back to the given labels when empty/invalid. */
 function parseTabsList(value: unknown, fallbackLabels: string[]): TabSpec[] {
   if (!Array.isArray(value)) {
     return fallbackLabels.map((label) => ({ label }));
@@ -190,6 +254,7 @@ function parseTabsList(value: unknown, fallbackLabels: string[]): TabSpec[] {
   return specs.length > 0 ? specs : fallbackLabels.map((label) => ({ label }));
 }
 
+/** Parses one named `templates` entry, inheriting unset keys from the defaults. */
 function parseTemplateEntry(
   value: unknown,
   defaults: { tabs: TabSpec[]; renameFirst: string },
@@ -206,20 +271,34 @@ function parseTemplateEntry(
   return { tabs, renameFirst };
 }
 
+/** Extracts the tab labels from a list of tab specs, in order. */
 export function tabLabels(tabs: TabSpec[]): string[] {
   return tabs.map((t) => t.label);
 }
 
-// Reads $HERDR_PLUGIN_CONFIG_DIR/tabs.json:
-// { "tabs": ["logs", "server"], "rename_first": "agent" }
-// Extended: tabs[] entries may be objects with label/cwd/command/env/splits,
-// and the file may define named "templates" + a "default_template".
-// Falls back to defaults when missing or invalid.
+/**
+ * Loads the global template config from `$HERDR_PLUGIN_CONFIG_DIR/tabs.json`.
+ *
+ * @example
+ * { "tabs": ["logs", "server"], "rename_first": "agent" }
+ *
+ * `tabs[]` entries may also be rich objects with `label`/`cwd`/`command`/
+ * `env`/`splits`, and the file may define named `templates` plus a
+ * `default_template`. Missing or invalid files fall back to built-in defaults.
+ */
 export function loadTabsConfig(env: NodeJS.ProcessEnv = process.env): TabsConfig {
   const dir = env.HERDR_PLUGIN_CONFIG_DIR || defaultConfigDir();
   return loadConfigFile(path.join(dir, 'tabs.json'));
 }
 
+/**
+ * Loads and parses a template config file (global `tabs.json` or per-project
+ * `.herdr-tabs.json`) into a {@link ResolvedConfig}.
+ *
+ * @param file Absolute path of the config file to read.
+ * @returns The parsed config, or built-in defaults when the file is missing
+ * or invalid.
+ */
 export function loadConfigFile(file: string): ResolvedConfig {
   const fallbackTabs: TabSpec[] = DEFAULT_TABS.map((label) => ({ label }));
   try {
@@ -258,10 +337,13 @@ export function loadConfigFile(file: string): ResolvedConfig {
   }
 }
 
-// Extracts the workspace id from HERDR_PLUGIN_EVENT_JSON.
-// Real wire format (herdr 0.7+): {"event":"...","data":{"workspace":{"workspace_id":"w5",...}}}
-// workspace.focused variant: {"event":"...","data":{"workspace_id":"w5"}}
-// Falls back to HERDR_WORKSPACE_ID (present on some invocations).
+/**
+ * Extracts the workspace id from `HERDR_PLUGIN_EVENT_JSON`.
+ *
+ * Handles the real wire shapes — `data.workspace.workspace_id`
+ * (workspace.created) and `data.workspace_id` (workspace.focused variant) —
+ * and falls back to `HERDR_WORKSPACE_ID`. Returns '' when nothing is found.
+ */
 export function extractWorkspaceId(env: NodeJS.ProcessEnv = process.env): string {
   let ws = '';
   try {
@@ -278,13 +360,15 @@ export function extractWorkspaceId(env: NodeJS.ProcessEnv = process.env): string
       event.workspace?.workspace_id ||
       '';
   } catch {
-    // Ignore malformed payloads; fall through to env fallback.
   }
   if (!ws) ws = env.HERDR_WORKSPACE_ID || '';
   return ws;
 }
 
-// Extracts the workspace id from HERDR_PLUGIN_CONTEXT_JSON (manual actions).
+/**
+ * Extracts the workspace id from `HERDR_PLUGIN_CONTEXT_JSON` (manual actions),
+ * falling back to `HERDR_WORKSPACE_ID`. Returns '' when nothing is found.
+ */
 export function extractContextWorkspaceId(env: NodeJS.ProcessEnv = process.env): string {
   let ws = '';
   try {
@@ -294,13 +378,16 @@ export function extractContextWorkspaceId(env: NodeJS.ProcessEnv = process.env):
     };
     ws = ctx.workspace_id || ctx.workspace?.workspace_id || '';
   } catch {
-    // Ignore malformed payloads; fall through to env fallback.
   }
   if (!ws) ws = env.HERDR_WORKSPACE_ID || '';
   return ws;
 }
 
-/** Best-effort workspace cwd from event/context env payloads (no herdr call). */
+/**
+ * Best-effort workspace cwd from event/context env payloads, without any
+ * Herdr call. Checks `workspace_cwd`, `focused_pane_cwd`, and worktree
+ * checkout paths. Returns '' when nothing is found.
+ */
 export function extractWorkspaceCwd(env: NodeJS.ProcessEnv = process.env): string {
   try {
     const ctx = JSON.parse(env.HERDR_PLUGIN_CONTEXT_JSON || '{}') as {
@@ -315,7 +402,6 @@ export function extractWorkspaceCwd(env: NodeJS.ProcessEnv = process.env): strin
       '';
     if (cwd) return cwd;
   } catch {
-    // Ignore malformed payloads.
   }
   try {
     const event = JSON.parse(env.HERDR_PLUGIN_EVENT_JSON || '{}') as {
@@ -329,11 +415,11 @@ export function extractWorkspaceCwd(env: NodeJS.ProcessEnv = process.env): strin
       data.workspace?.worktree?.checkout_path || data.worktree?.path || '';
     if (typeof cwd === 'string' && cwd) return cwd;
   } catch {
-    // Ignore malformed payloads.
   }
   return '';
 }
 
+/** Reads the first pane cwd out of `pane list` JSON output. */
 function parsePaneListCwd(stdout: string): string {
   try {
     const data = JSON.parse(stdout || '{}') as {
@@ -345,12 +431,14 @@ function parsePaneListCwd(stdout: string): string {
       if (cwd) return cwd;
     }
   } catch {
-    // Ignore malformed output.
   }
   return '';
 }
 
-/** Queries herdr for the workspace's checkout cwd (first pane's cwd). */
+/**
+ * Resolves the workspace's checkout cwd: env payloads first, then the first
+ * pane's cwd via `pane list`. Returns '' when nothing is found.
+ */
 export function resolveWorkspaceCwd(
   ws: string,
   options: {
@@ -371,7 +459,12 @@ export function resolveWorkspaceCwd(
   }
 }
 
-/** Loads a per-project override file (<cwd>/.herdr-tabs.json); null when absent/invalid. */
+/**
+ * Loads the per-project override file `<cwd>/.herdr-tabs.json`.
+ *
+ * @returns The parsed project config, or null when the file is absent or
+ * does not hold a config object.
+ */
 export function loadProjectConfig(workspaceCwd: string): ResolvedConfig | null {
   if (!workspaceCwd) return null;
   const file = path.join(workspaceCwd, PROJECT_CONFIG_NAME);
@@ -381,9 +474,6 @@ export function loadProjectConfig(workspaceCwd: string): ResolvedConfig | null {
     return null;
   }
   const loaded = loadConfigFile(file);
-  // Distinguish "file missing/invalid, defaults returned" from a real project
-  // file: re-read raw to confirm the file parsed as an object. loadConfigFile
-  // already returns defaults on error, so verify the file holds an object.
   try {
     const raw: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (typeof raw !== 'object' || raw === null) return null;
@@ -393,13 +483,8 @@ export function loadProjectConfig(workspaceCwd: string): ResolvedConfig | null {
   return loaded;
 }
 
-export interface ResolvedConfig extends TabsConfig {
-  templates?: Record<string, { tabs: TabSpec[]; renameFirst: string }>;
-  defaultTemplate?: string;
-}
-
 /**
- * Resolves the effective config: per-project `.herdr-tabs.json` in the
+ * Resolves the effective config: the per-project `.herdr-tabs.json` in the
  * workspace cwd wins over the global `tabs.json`.
  */
 export function resolveTabsConfig(
@@ -428,16 +513,28 @@ export function resolveTabsConfig(
   return { ...global, source: 'global' };
 }
 
+/** A template picked out of a resolved config by {@link selectTemplate}. */
 export interface SelectedTemplate {
+  /** Tabs to create, in order. */
   tabs: TabSpec[];
+  /** Label applied to `<ws>:t1`. */
   renameFirst: string;
+  /** Selected template name ('' for the top-level default). */
   name: string;
+  /** Set when `HERDR_TEMPLATE` names an unknown template. */
   error?: string;
 }
 
 /**
- * Picks which template to apply. Non-interactive: HERDR_TEMPLATE wins, then
- * the file's default_template, then the top-level default.
+ * Picks which template to apply from a resolved config.
+ *
+ * `HERDR_TEMPLATE` wins when set to a known template name (`default`
+ * explicitly selects the top-level tabs). Otherwise the file's
+ * `default_template` applies when it names a known template, else the
+ * top-level default is used.
+ *
+ * @returns The selected tabs and rename label; `error` is set instead of
+ * throwing when `HERDR_TEMPLATE` names an unknown template.
  */
 export function selectTemplate(
   config: ResolvedConfig,
@@ -465,22 +562,31 @@ export function selectTemplate(
   return { tabs: config.tabs, renameFirst: config.renameFirst, name: '' };
 }
 
+/**
+ * Returns the plugin state directory, creating it when needed. Marker files
+ * in it record which workspaces were already templated.
+ */
 export function stateDir(env: NodeJS.ProcessEnv = process.env): string {
   const dir =
     env.HERDR_PLUGIN_STATE_DIR || path.join(os.tmpdir(), 'herdr-workspace-template-state');
   try {
     fs.mkdirSync(dir, { recursive: true });
   } catch {
-    // Best effort; marker writes will simply fail silently.
   }
   return dir;
 }
 
+/** Marker file recording that a workspace was already templated. */
 function markerPath(ws: string, env: NodeJS.ProcessEnv = process.env): string {
   return path.join(stateDir(env), `done-${ws}`);
 }
 
-// Dedupe: workspace.focused fires on every switch; template each workspace once.
+/**
+ * Reports whether a workspace was already templated.
+ *
+ * `workspace.focused` fires on every switch, so the hook consults this to
+ * template each workspace only once.
+ */
 export function alreadyDone(ws: string, env: NodeJS.ProcessEnv = process.env): boolean {
   try {
     return fs.existsSync(markerPath(ws, env));
@@ -489,14 +595,19 @@ export function alreadyDone(ws: string, env: NodeJS.ProcessEnv = process.env): b
   }
 }
 
+/** Records a workspace as templated. Best effort; write failures are ignored. */
 export function markDone(ws: string, env: NodeJS.ProcessEnv = process.env): void {
   try {
     fs.writeFileSync(markerPath(ws, env), '');
   } catch {
-    // Best effort.
   }
 }
 
+/**
+ * Counts the tabs of a workspace via `tab list`.
+ *
+ * @returns The tab count, or 0 when the workspace cannot be listed.
+ */
 export function tabCount(ws: string): number {
   const result = runHerdr(['tab', 'list', '--workspace', ws]);
   if (result.status !== 0) return 0;
@@ -510,6 +621,7 @@ export function tabCount(ws: string): number {
   }
 }
 
+/** Extracts created tab/pane ids from `tab create` / `pane split` JSON output. */
 function parseHerdrIds(stdout: string): { tabId: string; paneId: string } {
   try {
     const data = JSON.parse(stdout || '{}') as {
@@ -528,6 +640,7 @@ function parseHerdrIds(stdout: string): { tabId: string; paneId: string } {
   }
 }
 
+/** Expands an env record into repeated `--env KEY=VALUE` CLI arguments. */
 function envArgs(env?: Record<string, string>): string[] {
   if (!env) return [];
   const args: string[] = [];
@@ -535,17 +648,31 @@ function envArgs(env?: Record<string, string>): string[] {
   return args;
 }
 
+/** Options for {@link applyTemplate}. */
 export interface ApplyOptions {
+  /**
+   * When true (event path), only fresh 1-tab workspaces are filled; anything
+   * else is skipped and marked done.
+   */
   guard?: boolean;
+  /** Environment used for config/state dir resolution. */
   env?: NodeJS.ProcessEnv;
+  /** Herdr runner, injectable for tests. */
   run?: (args: string[]) => { status: number; stdout: string; stderr: string };
+  /** Tab counter, injectable for tests. */
   countTabs?: (ws: string) => number;
   /** Pre-resolved template (from resolveTabsConfig + selectTemplate). */
   config?: TabsConfig;
 }
 
-// Applies the template to a workspace.
-// With guard=true (event path) only fresh 1-tab workspaces are filled.
+/**
+ * Applies a template to a workspace: renames `<ws>:t1`, then creates each tab
+ * with its cwd/env plus optional commands and pane splits.
+ *
+ * @param ws Workspace id to template.
+ * @returns Labels applied, the rename label used, and any tab/split labels
+ * that failed along the way.
+ */
 export function applyTemplate(ws: string, options: ApplyOptions = {}): ApplyResult {
   const { guard = true, env = process.env } = options;
   const run = options.run ?? runHerdr;
