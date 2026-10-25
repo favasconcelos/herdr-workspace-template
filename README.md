@@ -13,14 +13,27 @@ herdr plugin install favasconcelos/herdr-workspace-template
 Local dev:
 
 ```bash
-herdr plugin link /home/jika/projects/herdr-workspace-template
+herdr plugin link <checkout>
 ```
 
-Requires Herdr `>= 0.9.0` (`min_herdr_version = "0.9.0"`).
+Requires Herdr `>= 0.9.0` (`min_herdr_version = "0.9.0"`). Platforms: `linux`, `macos`
+(scripts are `bash`; Windows is not declared).
+
+## Project structure
+
+```text
+herdr-plugin.toml     # manifest (entrypoints → src/*.sh)
+src/
+  autotabs.sh         # workspace.created + workspace.focused handler
+  autotabs_for.sh     # shared apply core
+  apply.sh            # manual action entrypoint
+  lib.sh              # config loader, event parsing, dedupe
+tabs.json.example     # copy to $(herdr plugin config-dir workspace-template)/tabs.json
+```
 
 ## How it works
 
-- `[[events]] on = "workspace.created"` + `on = "workspace.focused"` → `autotabs.sh`.
+- `[[events]] on = "workspace.created"` + `on = "workspace.focused"` → `src/autotabs.sh`.
   Both are needed: UI-created worktrees historically emit only `workspace.focused`,
   CLI creates emit `workspace.created` (same pattern as `herdr-plugin-workspace-manager`).
   A state-dir marker (`done-<workspace_id>`) dedupes so each workspace is templated once.
@@ -30,7 +43,7 @@ Requires Herdr `>= 0.9.0` (`min_herdr_version = "0.9.0"`).
   ```
   Fallback when missing: rename first tab to `agent`, add `logs` + `server`.
 - Guard: only fills fresh workspaces with exactly 1 tab — skips restores and grouped worktree workspaces.
-- `[[actions]] apply` (`workspace` context) → `apply.sh` for manual re-apply to the current workspace.
+- `[[actions]] apply` (`workspace` context) → `src/apply.sh` for manual re-apply to the current workspace.
 - Event payload shape handled: `{"event": ..., "data": {"workspace": {"workspace_id": "wX"}}}` for
   created, `{"data": {"workspace_id": "wX"}}` for focused, plus `HERDR_WORKSPACE_ID` fallback.
 
@@ -53,10 +66,30 @@ cp tabs.json.example "$(herdr plugin config-dir workspace-template)/tabs.json"
    ```bash
    herdr plugin action invoke workspace-template.apply
    ```
+   Optional keybinding (`~/.config/herdr/config.toml`):
+   ```toml
+   [[keys.command]]
+   key = "prefix+t"
+   type = "plugin_action"
+   command = "workspace-template.apply"
+   description = "apply workspace template"
+   ```
 3. Debug:
    ```bash
    herdr plugin log list --plugin workspace-template
    ```
+
+## Troubleshooting
+
+- **Tabs don't appear:** check `herdr plugin list` shows `workspace-template` enabled,
+  then `herdr plugin log list --plugin workspace-template` — a `workspace.created`
+  entry with `autotabs: ... templated` means it ran; `... has N tabs, skipping`
+  means the 1-tab guard fired (workspace wasn't fresh).
+- **Link warnings:** `herdr plugin link` warns on unknown event names — valid names
+  here are `workspace.created` and `workspace.focused` (dotted form).
+- **`tabs.json` not picked up:** confirm the path with
+  `herdr plugin config-dir workspace-template` and validate JSON with
+  `python3 -m json.tool <path>/tabs.json`.
 
 ## Configuration
 
@@ -79,7 +112,13 @@ lightweight alternative: a fixed tab set applied to *every* new workspace, no pe
 
 ## Contributing
 
-PRs welcome. Test with `herdr plugin link` + `herdr workspace create --cwd /tmp --label template-test`.
+PRs welcome. Test with:
+
+```bash
+herdr plugin link <checkout>
+herdr workspace create --cwd /tmp --label template-test --focus
+herdr tab list --workspace <wX>
+```
 
 ## License
 
