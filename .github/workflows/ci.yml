@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ['20', '22', '24']
+        node: ["22", "24"]
     steps:
       - uses: actions/checkout@v7.0.1
 
@@ -25,6 +25,9 @@ jobs:
 
       - name: Install (locked deps)
         run: npm ci
+
+      - name: Lint
+        run: npm run lint
 
       - name: Build plugin
         run: npm run build

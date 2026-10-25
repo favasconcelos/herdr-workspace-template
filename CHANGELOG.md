@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+
+- Minimum Node.js raised `>= 18` → `>= 22` (the test runner relies on glob
+  patterns, which `node --test` only expands on 22+); CI matrix is now 22/24.
+
+### Added
+
+- Biome lint (`npm run lint`, `npm run format`) on the shared
+  `@favasconcelos/biome-config/base` preset, enforced in CI — same setup as
+  `reclaim-cli`.
+- Per-project override: `.herdr-tabs.json` in the workspace checkout wins over
+  global `tabs.json` (resolved via invocation context cwd, else `pane list`).
+- Rich tab specs: `tabs[]` entries accept `{label, cwd, command, env, splits}`
+  (`title`/`panes` aliases, `vertical`→`right` / `horizontal`→`down` mapping);
+  splits run through `pane split` + `pane run` so Windows support is kept.
+- Named `templates` + `default_template` in either config file; `HERDR_TEMPLATE`
+  selects one, manual `apply` offers an `fzf` picker when on a TTY.
+- 15 new unit tests (31 total) covering spec parsing, templates, project
+  override, and split/command apply sequences.
+
+### Changed
+
 - Rewrote `src/` in TypeScript (`lib.ts`, `autotabs.ts`, `apply.ts`, compiled to
   `dist/`; `tsconfig.json` extends `@tsconfig/node24`). Manifest entrypoints are
   `node dist/*.js` with `[[build]]` (`npm ci` + `npm run build`) for installs.
@@ -20,6 +41,7 @@ All notable changes to this project will be documented in this file.
 ## [0.1.0] - 2026-10-25
 
 ### Added
+
 - Auto-create pre-configured tabs on `workspace.created` + `workspace.focused` (covers CLI and UI paths).
 - `tabs.json` config (`tabs`, `rename_first`) with `logs`/`server` + `agent` defaults.
 - 1-tab guard (skip restores / grouped worktrees) and per-workspace dedupe marker.
