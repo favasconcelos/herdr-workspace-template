@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Per-project override: `.herdr-tabs.json` in the workspace checkout wins over
+  global `tabs.json` (resolved via invocation context cwd, else `pane list`).
+- Rich tab specs: `tabs[]` entries accept `{label, cwd, command, env, splits}`
+  (`title`/`panes` aliases, `vertical`→`right` / `horizontal`→`down` mapping);
+  splits run through `pane split` + `pane run` so Windows support is kept.
+- Named `templates` + `default_template` in either config file; `HERDR_TEMPLATE`
+  selects one, manual `apply` offers an `fzf` picker when on a TTY.
+- 15 new unit tests (31 total) covering spec parsing, templates, project
+  override, and split/command apply sequences.
+
 ### Changed
 - Rewrote `src/` in TypeScript (`lib.ts`, `autotabs.ts`, `apply.ts`, compiled to
   `dist/`; `tsconfig.json` extends `@tsconfig/node24`). Manifest entrypoints are

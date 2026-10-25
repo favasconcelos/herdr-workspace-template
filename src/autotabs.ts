@@ -3,7 +3,13 @@
 // Env from Herdr: HERDR_BIN_PATH, HERDR_PLUGIN_EVENT, HERDR_PLUGIN_EVENT_JSON,
 // HERDR_PLUGIN_CONFIG_DIR, HERDR_PLUGIN_STATE_DIR, HERDR_WORKSPACE_ID (sometimes).
 
-import { extractWorkspaceId, alreadyDone, applyTemplate } from './lib';
+import {
+  extractWorkspaceId,
+  alreadyDone,
+  applyTemplate,
+  resolveTabsConfig,
+  selectTemplate,
+} from './lib';
 
 function main(): void {
   const ws = extractWorkspaceId();
@@ -15,7 +21,25 @@ function main(): void {
   // Dedupe: workspace.focused fires on every switch; only template once.
   if (alreadyDone(ws)) process.exit(0);
 
-  const result = applyTemplate(ws, { guard: true });
+  // Non-interactive: per-project .herdr-tabs.json wins over global tabs.json,
+  // HERDR_TEMPLATE / default_template pick a named template.
+  const resolved = resolveTabsConfig(ws);
+  const selected = selectTemplate(resolved);
+  if (selected.error) {
+    console.error(`autotabs: ${selected.error}; using default template`);
+  }
+  const where = resolved.source === 'project' ? ` (project ${resolved.projectCwd})` : '';
+  const what = selected.name ? ` template "${selected.name}"` : '';
+
+  const result = applyTemplate(ws, {
+    guard: true,
+    config: {
+      tabs: selected.tabs,
+      renameFirst: selected.renameFirst,
+      templateName: selected.name,
+      source: resolved.source,
+    },
+  });
   if (!result.applied) {
     console.error(`autotabs: workspace ${ws} ${result.reason}`);
     process.exit(0);
@@ -25,7 +49,7 @@ function main(): void {
     console.error(`autotabs: failed to create tabs: ${result.failed.join(', ')}`);
   }
   console.log(
-    `autotabs: workspace ${ws} templated with [${result.renameFirst} ${result.tabs.join(' ')}]`,
+    `autotabs: workspace ${ws} templated${what} with [${result.renameFirst} ${result.tabs.join(' ')}]${where}`,
   );
 }
 

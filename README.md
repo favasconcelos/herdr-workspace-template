@@ -27,7 +27,7 @@ Platforms: `linux`, `macos`, `windows` (pure Node.js, no shell dependencies).
 ```text
 herdr-plugin.toml     # manifest (entrypoints → dist/*.js, [[build]] runs npm ci + build)
 src/
-  lib.ts              # config loader, event parsing, dedupe, herdr CLI calls
+  lib.ts              # config loader, templates, event parsing, dedupe, herdr CLI calls
   autotabs.ts         # workspace.created + workspace.focused handler
   apply.ts            # manual action entrypoint
 test/
@@ -45,11 +45,14 @@ TypeScript extends `@tsconfig/node24`; dependencies are pinned exact in
   Both are needed: UI-created worktrees historically emit only `workspace.focused`,
   CLI creates emit `workspace.created` (same pattern as `herdr-plugin-workspace-manager`).
   A state-dir marker (`done-<workspace_id>`) dedupes so each workspace is templated once.
-- Reads the tab list from the plugin config dir `tabs.json`:
+- Reads the tab list from the plugin config dir `tabs.json`
+  (per-project `.herdr-tabs.json` in the workspace checkout wins when present):
   ```json
   { "tabs": ["logs", "server"], "rename_first": "agent" }
   ```
   Fallback when missing: rename first tab to `agent`, add `logs` + `server`.
+  Entries may be rich objects with `cwd`/`command`/`env`/`splits` (see
+  Configuration), and named `templates` can be defined for the chooser.
 - Guard: only fills fresh workspaces with exactly 1 tab — skips restores and grouped worktree workspaces.
 - `[[actions]] apply` (`workspace` context) → `src/apply.js` for manual re-apply to the current workspace.
 - Event payload shape handled: `{"event": ..., "data": {"workspace": {"workspace_id": "wX"}}}` for
@@ -72,8 +75,20 @@ cp tabs.json.example "$(herdr plugin config-dir workspace-template)/tabs.json"
    ```
 2. Manual re-apply from the Herdr UI (workspace context → Apply workspace template) or:
    ```bash
-   herdr plugin action invoke workspace-template.apply
+   herdr plugin action invoke apply --plugin workspace-template
    ```
+   Headless invocations (UI button, CLI) always use the default template (or
+   `default_template` when set). To choose a template, run the entrypoint
+   directly in a terminal inside the target workspace — its pane env already
+   carries `HERDR_WORKSPACE_ID`, and a TTY enables the picker:
+   ```bash
+   HERDR_TEMPLATE=rust node <checkout>/dist/apply.js   # named template, no prompt
+   node <checkout>/dist/apply.js                       # fzf picker when on a TTY
+   ```
+   This works because Herdr injects the caller's workspace into each managed
+   pane (`HERDR_WORKSPACE_ID`, see `herdr --skill`); custom env vars are not
+   forwarded through `plugin action invoke`, so the direct form is required
+   for overrides.
    Optional keybinding (`~/.config/herdr/config.toml`):
    ```toml
    [[keys.command]]
@@ -101,10 +116,56 @@ cp tabs.json.example "$(herdr plugin config-dir workspace-template)/tabs.json"
 
 ## Configuration
 
+Global config lives in `tabs.json` under `herdr plugin config-dir workspace-template`.
+A per-project `.herdr-tabs.json` in the workspace's checkout directory overrides
+it (same schema). Resolution order: `.herdr-tabs.json` → global `tabs.json` →
+built-in defaults.
+
 | Key | Default | Meaning |
 | --- | ------- | ------- |
 | `tabs` | `["logs","server"]` | Labels created with `tab create --no-focus` |
 | `rename_first` | `"agent"` | Renames auto-created `<ws>:t1`; empty string disables |
+| `templates` | `{}` | Named templates `{name: {tabs, rename_first}}` for the chooser |
+| `default_template` | `""` | Named template auto-applied to new workspaces; default is top-level `tabs` |
+
+Each `tabs[]` entry is either a plain label string or a rich object:
+
+```json
+{
+  "tabs": [
+    "logs",
+    { "label": "server", "cwd": "/repo", "command": "npm run dev" },
+    {
+      "label": "code",
+      "splits": [
+        { "label": "db", "command": "pg start", "direction": "down", "ratio": 0.3 }
+      ]
+    }
+  ],
+  "rename_first": "agent"
+}
+```
+
+Rich tab keys: `label` (or `title`), `cwd`, `command` (string or string array,
+run with `pane run` in the tab's root pane), `env` (`{KEY: value}`), `splits`
+(extra panes; each also accepts `direction`: `right`/`down`, with
+`vertical`→`right` and `horizontal→down` aliases, plus optional `ratio` in
+`(0,1)`). `panes` is accepted as an alias for `splits` (workspace-manager
+style): its first entry folds into the root pane, the rest become splits.
+
+Named templates for the chooser (`apply` action):
+
+```json
+{
+  "tabs": ["logs", "server"],
+  "rename_first": "agent",
+  "default_template": "node",
+  "templates": {
+    "node": { "tabs": ["dev", "test"] },
+    "rust": { "tabs": ["bacon"], "rename_first": "main" }
+  }
+}
+```
 
 ## Difference vs herdr-plugin-workspace-manager
 
@@ -115,15 +176,16 @@ lightweight alternative: a fixed tab set applied to *every* new workspace, no pe
 ## Roadmap
 
 - [x] v0.1 fixed list + 1-tab guard + dedupe + manual apply
-- [ ] v0.2 per-project override (`.herdr-tabs.json`) + `layout.apply` support (splits, cwd, commands)
-- [ ] v0.3 prompt/chooser at creation (popup + fzf)
+- [x] v0.2 per-project override (`.herdr-tabs.json`) + layout support (splits, cwd, commands via `pane split`/`pane run`, no socket API so Windows keeps working)
+- [x] v0.3 template chooser (`templates` + `default_template`, `HERDR_TEMPLATE` override, `fzf` picker in manual `apply` when on a TTY)
+- [ ] v0.4 popup picker at creation time (plugin pane `popup` placement)
 
 ## Contributing
 
 PRs welcome. Test with:
 
 ```bash
-npm test                                              # build tests + 16 unit tests
+npm test                                              # build tests + 31 unit tests
 herdr plugin link <checkout> && npm run build
 herdr workspace create --cwd /tmp --label template-test --focus
 herdr tab list --workspace <wX>
