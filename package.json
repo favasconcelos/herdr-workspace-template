@@ -4,7 +4,7 @@
   "description": "Herdr plugin: auto-create pre-configured tabs on every new workspace",
   "license": "MIT",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

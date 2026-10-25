@@ -19,7 +19,7 @@ herdr plugin link <checkout>
 cd <checkout> && npm ci && npm run build
 ```
 
-Requires Herdr `>= 0.9.0` (`min_herdr_version = "0.9.0"`) and Node.js `>= 18`.
+Requires Herdr `>= 0.9.0` (`min_herdr_version = "0.9.0"`) and Node.js `>= 22`.
 Platforms: `linux`, `macos`, `windows` (pure Node.js, no shell dependencies).
 
 ## Project structure

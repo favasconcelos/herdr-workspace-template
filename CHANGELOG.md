@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Minimum Node.js raised `>= 18` → `>= 22` (the test runner relies on glob
+  patterns, which `node --test` only expands on 22+); CI matrix is now 22/24.
+
 ### Added
 
 - Biome lint (`npm run lint`, `npm run format`) on the shared
