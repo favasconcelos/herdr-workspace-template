@@ -49,10 +49,10 @@ TypeScript extends `@tsconfig/node24`; dependencies are pinned exact in
   (per-project `.herdr-tabs.json` in the workspace checkout wins when present):
 
   ```json
-  { "tabs": ["logs", "server"], "rename_first": "agent" }
+  { "tabs": ["AI", "terminal"], "rename_first": "terminal" }
   ```
 
-  Fallback when missing: rename first tab to `agent`, add `logs` + `server`.
+  Fallback when missing: rename first tab to `terminal`, add `AI` + `terminal`.
   Entries may be rich objects with `cwd`/`command`/`env`/`splits` (see
   Configuration), and named `templates` can be defined for the chooser.
 - Guard: only fills fresh workspaces with exactly 1 tab — skips restores and grouped worktree workspaces.
@@ -74,7 +74,7 @@ cp tabs.json.example "$(herdr plugin config-dir workspace-template)/tabs.json"
    ```bash
    herdr workspace create --cwd ~/code/foo --label foo
    herdr tab list --workspace <wX>
-   # wX:t1 agent, wX:t2 logs, wX:t3 server
+   # wX:t1 terminal, wX:t2 AI, wX:t3 terminal
    ```
 2. Manual re-apply from the Herdr UI (workspace context → Apply workspace template) or:
 
@@ -132,8 +132,8 @@ built-in defaults.
 
 | Key                | Default             | Meaning                                                                    |
 | ------------------ | ------------------- | -------------------------------------------------------------------------- |
-| `tabs`             | `["logs","server"]` | Labels created with `tab create --no-focus`                                |
-| `rename_first`     | `"agent"`           | Renames auto-created `<ws>:t1`; empty string disables                      |
+| `tabs`             | `["AI","terminal"]` | Labels created with `tab create --no-focus`                                |
+| `rename_first`     | `"terminal"`        | Renames auto-created `<ws>:t1`; empty string disables                      |
 | `templates`        | `{}`                | Named templates `{name: {tabs, rename_first}}` for the chooser             |
 | `default_template` | `""`                | Named template auto-applied to new workspaces; default is top-level `tabs` |
 

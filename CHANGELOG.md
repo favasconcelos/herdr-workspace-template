@@ -2,10 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.2.0] - 2026-10-25
 
 ### Changed
 
+- Default template is now `AI` + `terminal` tabs with `rename_first` =
+  `terminal` (was `logs`/`server` + `agent`); `tabs.json.example` updated
+  to match.
 - Minimum Node.js raised `>= 18` → `>= 22` (the test runner relies on glob
   patterns, which `node --test` only expands on 22+); CI matrix is now 22/24.
 

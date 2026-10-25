@@ -14,9 +14,9 @@ import * as path from 'node:path';
 /** Herdr plugin id, used for default config/state directory names. */
 export const PLUGIN_ID = 'workspace-template';
 /** Tab labels created when no config file is found. */
-export const DEFAULT_TABS: string[] = ['logs', 'server'];
+export const DEFAULT_TABS: string[] = ['AI', 'terminal'];
 /** Label applied to `<ws>:t1` when no config file is found; empty disables renaming. */
-export const DEFAULT_RENAME_FIRST = 'agent';
+export const DEFAULT_RENAME_FIRST = 'terminal';
 /** Per-project override file, resolved inside the workspace checkout directory. */
 export const PROJECT_CONFIG_NAME = '.herdr-tabs.json';
 
@@ -325,7 +325,7 @@ export function tabLabels(tabs: TabSpec[]): string[] {
  * Loads the global template config from `$HERDR_PLUGIN_CONFIG_DIR/tabs.json`.
  *
  * @example
- * { "tabs": ["logs", "server"], "rename_first": "agent" }
+ * { "tabs": ["AI", "terminal"], "rename_first": "terminal" }
  *
  * `tabs[]` entries may also be rich objects with `label`/`cwd`/`command`/
  * `env`/`splits`, and the file may define named `templates` plus a

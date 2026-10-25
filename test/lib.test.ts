@@ -94,8 +94,8 @@ describe('loadTabsConfig', () => {
 
   it('falls back to defaults when tabs.json is missing', () => {
     const config = loadTabsConfig(makeEnv({ HERDR_PLUGIN_CONFIG_DIR: dir }));
-    assert.deepEqual(tabLabels(config.tabs), ['logs', 'server']);
-    assert.equal(config.renameFirst, 'agent');
+    assert.deepEqual(tabLabels(config.tabs), ['AI', 'terminal']);
+    assert.equal(config.renameFirst, 'terminal');
   });
 
   it('reads tabs and rename_first from tabs.json', () => {
@@ -108,13 +108,13 @@ describe('loadTabsConfig', () => {
   it('falls back to defaults on invalid JSON', () => {
     fs.writeFileSync(path.join(dir, 'tabs.json'), '{oops');
     const config = loadTabsConfig(makeEnv({ HERDR_PLUGIN_CONFIG_DIR: dir }));
-    assert.deepEqual(tabLabels(config.tabs), ['logs', 'server']);
+    assert.deepEqual(tabLabels(config.tabs), ['AI', 'terminal']);
   });
 
   it('ignores empty tabs arrays but honors empty rename_first', () => {
     fs.writeFileSync(path.join(dir, 'tabs.json'), JSON.stringify({ tabs: [], rename_first: '' }));
     const config = loadTabsConfig(makeEnv({ HERDR_PLUGIN_CONFIG_DIR: dir }));
-    assert.deepEqual(tabLabels(config.tabs), ['logs', 'server']);
+    assert.deepEqual(tabLabels(config.tabs), ['AI', 'terminal']);
     assert.equal(config.renameFirst, '');
   });
 });
