@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- Rewrote `src/` in Node.js (`lib.js`, `autotabs.js`, `apply.js`; `package.json`
+  with `engines: node >= 18`). Declares `windows` platform support.
+
 ## [0.1.0] - 2026-10-25
 
 ### Added

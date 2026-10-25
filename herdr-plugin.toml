@@ -3,21 +3,21 @@ name = "Workspace Template"
 version = "0.1.0"
 min_herdr_version = "0.9.0"
 description = "Auto-create pre-configured tabs on every new workspace"
-platforms = ["linux", "macos"]
+platforms = ["linux", "macos", "windows"]
 
 [[events]]
 on = "workspace.created"
-command = ["bash", "src/autotabs.sh"]
+command = ["node", "src/autotabs.js"]
 
 # UI-created worktrees historically emit workspace.focused instead of
 # workspace.created — the hook dedupes via state dir, so the extra event is harmless.
 [[events]]
 on = "workspace.focused"
-command = ["bash", "src/autotabs.sh"]
+command = ["node", "src/autotabs.js"]
 
 [[actions]]
 id = "apply"
 title = "Apply workspace template"
 description = "Manually apply configured tabs to current workspace"
 contexts = ["workspace"]
-command = ["bash", "src/apply.sh"]
+command = ["node", "src/apply.js"]

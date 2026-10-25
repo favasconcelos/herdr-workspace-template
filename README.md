@@ -16,24 +16,23 @@ Local dev:
 herdr plugin link <checkout>
 ```
 
-Requires Herdr `>= 0.9.0` (`min_herdr_version = "0.9.0"`). Platforms: `linux`, `macos`
-(scripts are `bash`; Windows is not declared).
+Requires Herdr `>= 0.9.0` (`min_herdr_version = "0.9.0"`) and Node.js `>= 18`.
+Platforms: `linux`, `macos`, `windows` (pure Node.js, no shell dependencies).
 
 ## Project structure
 
 ```text
-herdr-plugin.toml     # manifest (entrypoints → src/*.sh)
+herdr-plugin.toml     # manifest (entrypoints → src/*.js)
 src/
-  autotabs.sh         # workspace.created + workspace.focused handler
-  autotabs_for.sh     # shared apply core
-  apply.sh            # manual action entrypoint
-  lib.sh              # config loader, event parsing, dedupe
+  autotabs.js         # workspace.created + workspace.focused handler
+  apply.js            # manual action entrypoint
+  lib.js              # config loader, event parsing, dedupe, herdr CLI calls
 tabs.json.example     # copy to $(herdr plugin config-dir workspace-template)/tabs.json
 ```
 
 ## How it works
 
-- `[[events]] on = "workspace.created"` + `on = "workspace.focused"` → `src/autotabs.sh`.
+- `[[events]] on = "workspace.created"` + `on = "workspace.focused"` → `src/autotabs.js`.
   Both are needed: UI-created worktrees historically emit only `workspace.focused`,
   CLI creates emit `workspace.created` (same pattern as `herdr-plugin-workspace-manager`).
   A state-dir marker (`done-<workspace_id>`) dedupes so each workspace is templated once.
@@ -43,7 +42,7 @@ tabs.json.example     # copy to $(herdr plugin config-dir workspace-template)/ta
   ```
   Fallback when missing: rename first tab to `agent`, add `logs` + `server`.
 - Guard: only fills fresh workspaces with exactly 1 tab — skips restores and grouped worktree workspaces.
-- `[[actions]] apply` (`workspace` context) → `src/apply.sh` for manual re-apply to the current workspace.
+- `[[actions]] apply` (`workspace` context) → `src/apply.js` for manual re-apply to the current workspace.
 - Event payload shape handled: `{"event": ..., "data": {"workspace": {"workspace_id": "wX"}}}` for
   created, `{"data": {"workspace_id": "wX"}}` for focused, plus `HERDR_WORKSPACE_ID` fallback.
 
