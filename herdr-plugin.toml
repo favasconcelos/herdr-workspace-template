@@ -7,17 +7,24 @@ platforms = ["linux", "macos", "windows"]
 
 [[events]]
 on = "workspace.created"
-command = ["node", "src/autotabs.js"]
+command = ["node", "dist/autotabs.js"]
 
 # UI-created worktrees historically emit workspace.focused instead of
 # workspace.created — the hook dedupes via state dir, so the extra event is harmless.
 [[events]]
 on = "workspace.focused"
-command = ["node", "src/autotabs.js"]
+command = ["node", "dist/autotabs.js"]
 
 [[actions]]
 id = "apply"
 title = "Apply workspace template"
 description = "Manually apply configured tabs to current workspace"
 contexts = ["workspace"]
-command = ["node", "src/apply.js"]
+command = ["node", "dist/apply.js"]
+
+# Build the TypeScript sources on install (local `plugin link` needs `npm run build`).
+[[build]]
+command = ["npm", "ci"]
+
+[[build]]
+command = ["npm", "run", "build"]

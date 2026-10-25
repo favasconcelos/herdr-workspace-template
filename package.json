@@ -7,6 +7,13 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test test/"
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.test.json && node --test \"dist-test/**/*.test.js\"",
+    "clean": "rm -rf dist dist-test"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "24.0.5",
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3"
   }
 }

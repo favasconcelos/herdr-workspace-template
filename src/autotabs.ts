@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-'use strict';
-// autotabs.js — runs on workspace.created / workspace.focused.
+// autotabs.ts — runs on workspace.created / workspace.focused.
 // Env from Herdr: HERDR_BIN_PATH, HERDR_PLUGIN_EVENT, HERDR_PLUGIN_EVENT_JSON,
 // HERDR_PLUGIN_CONFIG_DIR, HERDR_PLUGIN_STATE_DIR, HERDR_WORKSPACE_ID (sometimes).
 
-const { extractWorkspaceId, alreadyDone, applyTemplate } = require('./lib');
+import { extractWorkspaceId, alreadyDone, applyTemplate } from './lib';
 
-function main() {
+function main(): void {
   const ws = extractWorkspaceId();
   if (!ws) {
     console.error('autotabs: no workspace_id in event, skipping');
@@ -25,7 +24,9 @@ function main() {
   if (result.failed.length > 0) {
     console.error(`autotabs: failed to create tabs: ${result.failed.join(', ')}`);
   }
-  console.log(`autotabs: workspace ${ws} templated with [${result.renameFirst} ${result.tabs.join(' ')}]`);
+  console.log(
+    `autotabs: workspace ${ws} templated with [${result.renameFirst} ${result.tabs.join(' ')}]`,
+  );
 }
 
 main();

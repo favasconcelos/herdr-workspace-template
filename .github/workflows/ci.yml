@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: build + test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22', '24']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install (locked deps)
+        run: npm ci
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Validate plugin manifest
+        run: node -e "const t=require('node:fs').readFileSync('herdr-plugin.toml','utf8'); if(!t.includes('dist/autotabs.js')||!t.includes('dist/apply.js')) throw new Error('manifest entrypoints out of sync'); console.log('manifest OK')"
