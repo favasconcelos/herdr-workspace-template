@@ -1,0 +1,4 @@
+{
+  "tabs": ["logs", "server"],
+  "rename_first": "agent"
+}
