@@ -13,30 +13,26 @@
  * `HERDR_PLUGIN_STATE_DIR`, sometimes `HERDR_WORKSPACE_ID`.
  */
 
-import {
-  alreadyDone,
-  applyTemplate,
-  extractWorkspaceId,
-  resolveTabsConfig,
-  selectTemplate,
-} from './lib'
+import { alreadyDone, applyTemplate, extractWorkspaceId, resolveTabsConfig, selectTemplate } from './lib';
 
 function main(): void {
-  const ws = extractWorkspaceId()
+  const ws = extractWorkspaceId();
   if (!ws) {
-    console.error('autotabs: no workspace_id in event, skipping')
-    process.exit(0)
+    console.error('autotabs: no workspace_id in event, skipping');
+    process.exit(0);
   }
 
-  if (alreadyDone(ws)) process.exit(0)
+  if (alreadyDone(ws)) {
+    process.exit(0);
+  }
 
-  const resolved = resolveTabsConfig(ws)
-  const selected = selectTemplate(resolved)
+  const resolved = resolveTabsConfig(ws);
+  const selected = selectTemplate(resolved);
   if (selected.error) {
-    console.error(`autotabs: ${selected.error}; using default template`)
+    console.error(`autotabs: ${selected.error}; using default template`);
   }
-  const where = resolved.source === 'project' ? ` (project ${resolved.projectCwd})` : ''
-  const what = selected.name ? ` template "${selected.name}"` : ''
+  const where = resolved.source === 'project' ? ` (project ${resolved.projectCwd})` : '';
+  const what = selected.name ? ` template "${selected.name}"` : '';
 
   const result = applyTemplate(ws, {
     guard: true,
@@ -46,18 +42,16 @@ function main(): void {
       templateName: selected.name,
       source: resolved.source,
     },
-  })
+  });
   if (!result.applied) {
-    console.error(`autotabs: workspace ${ws} ${result.reason}`)
-    process.exit(0)
+    console.error(`autotabs: workspace ${ws} ${result.reason}`);
+    process.exit(0);
   }
 
   if (result.failed.length > 0) {
-    console.error(`autotabs: failed to create tabs: ${result.failed.join(', ')}`)
+    console.error(`autotabs: failed to create tabs: ${result.failed.join(', ')}`);
   }
-  console.log(
-    `autotabs: workspace ${ws} templated${what} with [${result.renameFirst} ${result.tabs.join(' ')}]${where}`,
-  )
+  console.log(`autotabs: workspace ${ws} templated${what} with [${result.renameFirst} ${result.tabs.join(' ')}]${where}`);
 }
 
-main()
+main();

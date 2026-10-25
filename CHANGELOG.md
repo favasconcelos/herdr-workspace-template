@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+
 - Biome lint (`npm run lint`, `npm run format`) on the shared
   `@favasconcelos/biome-config/base` preset, enforced in CI — same setup as
   `reclaim-cli`.
@@ -19,6 +20,7 @@ All notable changes to this project will be documented in this file.
   override, and split/command apply sequences.
 
 ### Changed
+
 - Rewrote `src/` in TypeScript (`lib.ts`, `autotabs.ts`, `apply.ts`, compiled to
   `dist/`; `tsconfig.json` extends `@tsconfig/node24`). Manifest entrypoints are
   `node dist/*.js` with `[[build]]` (`npm ci` + `npm run build`) for installs.
@@ -34,6 +36,7 @@ All notable changes to this project will be documented in this file.
 ## [0.1.0] - 2026-10-25
 
 ### Added
+
 - Auto-create pre-configured tabs on `workspace.created` + `workspace.focused` (covers CLI and UI paths).
 - `tabs.json` config (`tabs`, `rename_first`) with `logs`/`server` + `agent` defaults.
 - 1-tab guard (skip restores / grouped worktrees) and per-workspace dedupe marker.

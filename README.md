@@ -47,9 +47,11 @@ TypeScript extends `@tsconfig/node24`; dependencies are pinned exact in
   A state-dir marker (`done-<workspace_id>`) dedupes so each workspace is templated once.
 - Reads the tab list from the plugin config dir `tabs.json`
   (per-project `.herdr-tabs.json` in the workspace checkout wins when present):
+
   ```json
   { "tabs": ["logs", "server"], "rename_first": "agent" }
   ```
+
   Fallback when missing: rename first tab to `agent`, add `logs` + `server`.
   Entries may be rich objects with `cwd`/`command`/`env`/`splits` (see
   Configuration), and named `templates` can be defined for the chooser.
@@ -68,28 +70,34 @@ cp tabs.json.example "$(herdr plugin config-dir workspace-template)/tabs.json"
 ## Usage
 
 1. Create any workspace normally — tabs appear automatically:
+
    ```bash
    herdr workspace create --cwd ~/code/foo --label foo
    herdr tab list --workspace <wX>
    # wX:t1 agent, wX:t2 logs, wX:t3 server
    ```
 2. Manual re-apply from the Herdr UI (workspace context → Apply workspace template) or:
+
    ```bash
    herdr plugin action invoke apply --plugin workspace-template
    ```
+
    Headless invocations (UI button, CLI) always use the default template (or
    `default_template` when set). To choose a template, run the entrypoint
    directly in a terminal inside the target workspace — its pane env already
    carries `HERDR_WORKSPACE_ID`, and a TTY enables the picker:
+
    ```bash
    HERDR_TEMPLATE=rust node <checkout>/dist/apply.js   # named template, no prompt
    node <checkout>/dist/apply.js                       # fzf picker when on a TTY
    ```
+
    This works because Herdr injects the caller's workspace into each managed
    pane (`HERDR_WORKSPACE_ID`, see `herdr --skill`); custom env vars are not
    forwarded through `plugin action invoke`, so the direct form is required
    for overrides.
    Optional keybinding (`~/.config/herdr/config.toml`):
+
    ```toml
    [[keys.command]]
    key = "prefix+t"
@@ -98,6 +106,7 @@ cp tabs.json.example "$(herdr plugin config-dir workspace-template)/tabs.json"
    description = "apply workspace template"
    ```
 3. Debug:
+
    ```bash
    herdr plugin log list --plugin workspace-template
    ```
@@ -121,12 +130,12 @@ A per-project `.herdr-tabs.json` in the workspace's checkout directory overrides
 it (same schema). Resolution order: `.herdr-tabs.json` → global `tabs.json` →
 built-in defaults.
 
-| Key | Default | Meaning |
-| --- | ------- | ------- |
-| `tabs` | `["logs","server"]` | Labels created with `tab create --no-focus` |
-| `rename_first` | `"agent"` | Renames auto-created `<ws>:t1`; empty string disables |
-| `templates` | `{}` | Named templates `{name: {tabs, rename_first}}` for the chooser |
-| `default_template` | `""` | Named template auto-applied to new workspaces; default is top-level `tabs` |
+| Key                | Default             | Meaning                                                                    |
+| ------------------ | ------------------- | -------------------------------------------------------------------------- |
+| `tabs`             | `["logs","server"]` | Labels created with `tab create --no-focus`                                |
+| `rename_first`     | `"agent"`           | Renames auto-created `<ws>:t1`; empty string disables                      |
+| `templates`        | `{}`                | Named templates `{name: {tabs, rename_first}}` for the chooser             |
+| `default_template` | `""`                | Named template auto-applied to new workspaces; default is top-level `tabs` |
 
 Each `tabs[]` entry is either a plain label string or a rich object:
 
@@ -137,9 +146,7 @@ Each `tabs[]` entry is either a plain label string or a rich object:
     { "label": "server", "cwd": "/repo", "command": "npm run dev" },
     {
       "label": "code",
-      "splits": [
-        { "label": "db", "command": "pg start", "direction": "down", "ratio": 0.3 }
-      ]
+      "splits": [{ "label": "db", "command": "pg start", "direction": "down", "ratio": 0.3 }]
     }
   ],
   "rename_first": "agent"
@@ -171,7 +178,7 @@ Named templates for the chooser (`apply` action):
 
 [`razajamil/herdr-plugin-workspace-manager`](https://github.com/razajamil/herdr-plugin-workspace-manager)
 does declarative per-workspace tab/pane layouts with commands. This plugin is the
-lightweight alternative: a fixed tab set applied to *every* new workspace, no per-repo config.
+lightweight alternative: a fixed tab set applied to _every_ new workspace, no per-repo config.
 
 ## Roadmap
 
